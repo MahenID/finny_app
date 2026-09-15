@@ -7,19 +7,22 @@
         {
             "name": "finny_app",
             "request": "launch",
-            "type": "dart"
+            "type": "dart",
+            "args": ["--dart-define-from-file=secrets.json"]
         },
         {
             "name": "finny_app (profile mode)",
             "request": "launch",
             "type": "dart",
-            "flutterMode": "profile"
+            "flutterMode": "profile",
+            "args": ["--dart-define-from-file=secrets.json"]
         },
         {
             "name": "finny_app (release mode)",
             "request": "launch",
             "type": "dart",
-            "flutterMode": "release"
+            "flutterMode": "release",
+            "args": ["--dart-define-from-file=secrets.json"]
         }
     ]
 }
