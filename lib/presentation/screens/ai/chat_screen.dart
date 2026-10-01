@@ -1,10 +1,9 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import '../../../core/theme/app_colors.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../../core/constants/api_constants.dart';
+import '../../../core/services/ai_service.dart';
 import 'ai_history_screen.dart';
 
 class ChatScreen extends StatefulWidget {
@@ -18,15 +17,18 @@ class ChatScreen extends StatefulWidget {
 
 class _ChatScreenState extends State<ChatScreen> {
   // ===== KONFIGURASI AI: BASE URL & API KEY =====
-  // Isi kedua nilai ini di secrets.json pada root proyek:
-  // "GEMINI_BASE_URL": "https://generativelanguage.googleapis.com/v1beta"
-  // "GEMINI_API_KEY": "MASUKKAN_API_KEY_ANDA_DI_SINI"
-  // Base URL hanya sampai /v1beta, tanpa /models/... atau ?key=....
-  // Key dibaca dari file lokal; jangan tulis key asli di file Dart ini.
-  // Setelah mengubah secrets.json, jalankan ulang aplikasi dengan:
+  // Paste URL dan key penyedia Anda sekali di secrets.json (kedua layar).
+  // AI_BASE_URL: base URL API atau URL lengkap /chat/completions.
+  // AI_API_KEY: key penyedia Anda. Jangan tulis key asli di source Dart.
+  // AI_MODEL: opsional; kosongkan agar model dicari melalui /models.
+  // Format API harus OpenAI-compatible Chat Completions.
+  // Setelah mengubah secrets.json, hentikan lalu jalankan ulang:
   // flutter run --dart-define-from-file=secrets.json
-  final String baseUrl = ApiConstants.geminiBaseUrl;
-  final String apiKey = ApiConstants.geminiApiKey;
+  final AiService _aiService = AiService(
+    baseUrl: ApiConstants.aiBaseUrl,
+    apiKey: ApiConstants.aiApiKey,
+    model: ApiConstants.aiModel,
+  );
 
   final Color chatThemeColor = AppColors.accentGreen;
   final TextEditingController _controller = TextEditingController();
@@ -52,6 +54,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   void dispose() {
+    _aiService.dispose();
     _controller.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -69,7 +72,7 @@ class _ChatScreenState extends State<ChatScreen> {
     });
   }
 
-  // 🔥 FUNCTION GEMINI API
+  // Koneksi AI universal melalui layanan bersama.
   Future<String> askAI(String prompt) async {
     final user = FirebaseAuth.instance.currentUser;
 
@@ -77,32 +80,19 @@ class _ChatScreenState extends State<ChatScreen> {
       return "Silakan login terlebih dahulu untuk mengakses data keuangan kamu.";
     }
 
-    final snapshot = await FirebaseFirestore.instance
-        .collection("transactions")
-        .where("userId", isEqualTo: user.uid)
-        .get();
-
-    List<Map<String, dynamic>> transaksi = [];
-
-    for (var doc in snapshot.docs) {
-      transaksi.add(doc.data());
-    }
-
     try {
-      final normalizedBaseUrl = baseUrl.trim().replaceFirst(RegExp(r'/+$'), '');
-      final url = Uri.parse(
-        "$normalizedBaseUrl/models/gemini-3.5-flash:generateContent",
-      ).replace(queryParameters: {"key": apiKey});
+      final snapshot = await FirebaseFirestore.instance
+          .collection("transactions")
+          .where("userId", isEqualTo: user.uid)
+          .get();
 
-      final response = await http.post(
-        url,
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode({
-          "contents": [
-            {
-              "parts": [
-                {
-                  "text": """
+      List<Map<String, dynamic>> transaksi = [];
+
+      for (var doc in snapshot.docs) {
+        transaksi.add(doc.data());
+      }
+
+      return await _aiService.complete("""
 Kamu adalah Finny AI, asisten keuangan pribadi yang cerdas, ramah, dan solutif.
 
 ATURAN YANG HARUS DIIKUTI:
@@ -123,28 +113,11 @@ $transaksi
 
 PERTANYAAN PENGGUNA:
 $prompt
-""",
-                },
-              ],
-            },
-          ],
-        }),
-      );
-
-      debugPrint("STATUS: ${response.statusCode}");
-      debugPrint("BODY: ${response.body}");
-
-      final data = jsonDecode(response.body);
-
-      if (response.statusCode == 200 &&
-          data["candidates"] != null &&
-          data["candidates"].isNotEmpty) {
-        return data["candidates"][0]["content"]["parts"][0]["text"];
-      } else {
-        return "Mohon maaf, Finny AI sedang sibuk. Silakan coba sesaat lagi ya!";
-      }
+""");
+    } on AiException catch (e) {
+      return e.message;
     } catch (e) {
-      debugPrint("ERROR GEMINI: $e");
+      debugPrint("AI gagal memproses chat: ${e.runtimeType}");
       return "Waduh, terjadi kendala saat menghubungi AI. Pastikan koneksi internet kamu stabil ya!";
     }
   }

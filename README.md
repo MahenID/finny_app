@@ -10,14 +10,34 @@ Isi nilainya sekali di file lokal `secrets.json` pada root proyek:
 
 ```json
 {
-  "GEMINI_BASE_URL": "https://generativelanguage.googleapis.com/v1beta",
-  "GEMINI_API_KEY": "MASUKKAN_API_KEY_ANDA_DI_SINI"
+  "AI_BASE_URL": "https://api.penyedia-anda.com/v1",
+  "AI_API_KEY": "PASTE_API_KEY_ANDA_DI_SINI",
+  "AI_MODEL": ""
 }
 ```
 
 Jika file belum ada, salin `secrets.json.example` menjadi `secrets.json`.
-Base URL adalah URL dasar API Gemini, tanpa `/models/...:generateContent`
-atau `?key=...`. Pemanggilan AI menggunakan format Gemini `generateContent`.
+Ganti `AI_BASE_URL` dan `AI_API_KEY` dengan nilai dari penyedia AI Anda.
+URL bisa berupa base API (contoh `https://api.penyedia-anda.com/v1`)
+atau endpoint lengkap `https://api.penyedia-anda.com/v1/chat/completions`.
+Awalan path penyedia dan parameter query tetap dipertahankan.
+Key dikirim melalui header `Authorization: Bearer`, bukan parameter URL.
+
+Integrasi mendukung **OpenAI-compatible Chat Completions**, tanpa model atau
+host penyedia yang dikunci di kode. Contohnya, [Groq](https://console.groq.com/docs/openai)
+memakai base URL `https://api.groq.com/openai/v1`.
+API native dengan format lain, seperti Anthropic `/messages`, OpenAI `/responses`,
+atau Gemini `generateContent`, memerlukan endpoint kompatibel atau adapter lain.
+
+`AI_MODEL` boleh kosong. Aplikasi mencoba mengambil daftar dari endpoint `/models`
+di base API yang sama, melewati model audio/gambar/embedding yang dikenali, lalu
+memakai model teks pertama yang tersedia. Pilihan tersebut disimpan selama layar
+aktif. Jika penyedia tidak menyediakan daftar model, model yang terpilih tidak
+mendukung chat, atau Anda ingin memilih sendiri, isi `AI_MODEL` dengan ID model
+chat dari penyedia. Tidak semua API dapat digunakan dengan URL dan key saja.
+Untuk server lokal tanpa autentikasi, `AI_API_KEY` boleh kosong.
+
+Konfigurasi lama `GEMINI_BASE_URL` dan `GEMINI_API_KEY` tidak dipakai lagi oleh AI.
 File `secrets.json` diabaikan Git; jangan menulis key asli di source Dart.
 
 Jalankan aplikasi dengan:

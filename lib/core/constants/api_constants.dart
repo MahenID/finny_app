@@ -1,17 +1,14 @@
 /// Konfigurasi API untuk Finny App.
 ///
-/// Isi GEMINI_BASE_URL dan GEMINI_API_KEY di secrets.json pada root proyek.
+/// Isi AI_BASE_URL dan AI_API_KEY di secrets.json pada root proyek.
+/// AI_MODEL opsional: kosongkan untuk mencoba memilih model secara otomatis.
 /// Jalankan dengan `flutter run --dart-define-from-file=secrets.json`.
 /// File secrets.json diabaikan Git agar API key tidak ikut di-commit.
 class ApiConstants {
-  /// URL dasar Gemini, tanpa /models/...:generateContent atau ?key=....
-  static const String geminiBaseUrl = String.fromEnvironment(
-    'GEMINI_BASE_URL',
-    defaultValue: 'https://generativelanguage.googleapis.com/v1beta',
-  );
+  /// Base URL API atau URL lengkap endpoint /chat/completions.
+  static const String aiBaseUrl = String.fromEnvironment('AI_BASE_URL');
 
-  static const String geminiApiKey = String.fromEnvironment(
-    'GEMINI_API_KEY',
-    defaultValue: 'YOUR_GEMINI_API_KEY_HERE',
-  );
+  static const String aiApiKey = String.fromEnvironment('AI_API_KEY');
+
+  static const String aiModel = String.fromEnvironment('AI_MODEL');
 }

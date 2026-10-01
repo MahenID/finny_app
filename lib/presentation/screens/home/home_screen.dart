@@ -1,13 +1,12 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:http/http.dart' as http;
 import '../../../core/theme/app_colors.dart';
 import '../profile/profile_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../../core/utils/category_helper.dart';
 import '../../../core/utils/currency_helper.dart';
 import '../../../core/constants/api_constants.dart';
+import '../../../core/services/ai_service.dart';
 import '../transaction/add_transaction.dart';
 import '../transaction/category_detail_screen.dart';
 import '../transaction/recent_activity.dart';
@@ -23,15 +22,18 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   // ===== KONFIGURASI AI: BASE URL & API KEY =====
-  // Isi kedua nilai ini di secrets.json pada root proyek:
-  // "GEMINI_BASE_URL": "https://generativelanguage.googleapis.com/v1beta"
-  // "GEMINI_API_KEY": "MASUKKAN_API_KEY_ANDA_DI_SINI"
-  // Base URL hanya sampai /v1beta, tanpa /models/... atau ?key=....
-  // Key dibaca dari file lokal; jangan tulis key asli di file Dart ini.
-  // Setelah mengubah secrets.json, jalankan ulang aplikasi dengan:
+  // Paste URL dan key penyedia Anda sekali di secrets.json (kedua layar).
+  // AI_BASE_URL: base URL API atau URL lengkap /chat/completions.
+  // AI_API_KEY: key penyedia Anda. Jangan tulis key asli di source Dart.
+  // AI_MODEL: opsional; kosongkan agar model dicari melalui /models.
+  // Format API harus OpenAI-compatible Chat Completions.
+  // Setelah mengubah secrets.json, hentikan lalu jalankan ulang:
   // flutter run --dart-define-from-file=secrets.json
-  final String baseUrl = ApiConstants.geminiBaseUrl;
-  final String apiKey = ApiConstants.geminiApiKey;
+  final AiService _aiService = AiService(
+    baseUrl: ApiConstants.aiBaseUrl,
+    apiKey: ApiConstants.aiApiKey,
+    model: ApiConstants.aiModel,
+  );
 
   final ScrollController _scrollController = ScrollController();
 
@@ -40,7 +42,7 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isLoadingAi = false;
   bool _isBalanceVisible = true;
 
-  // 🔥 AI FUNCTION (Gemini API)
+  // Koneksi AI universal melalui layanan bersama.
   Future<String> _getAiInsight(List docs) async {
     try {
       List<Map<String, dynamic>> transactions = docs.map((doc) {
@@ -61,38 +63,11 @@ $transactions
 Berikan insight singkat (1-2 kalimat), ramah, memotivasi, dan solutif ala financial coach modern.
 """;
 
-      final normalizedBaseUrl = baseUrl.trim().replaceFirst(RegExp(r'/+$'), '');
-      final url = Uri.parse(
-        "$normalizedBaseUrl/models/gemini-3.5-flash:generateContent",
-      ).replace(queryParameters: {"key": apiKey});
-
-      final response = await http.post(
-        url,
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode({
-          "contents": [
-            {
-              "parts": [
-                {"text": prompt},
-              ],
-            },
-          ],
-        }),
-      );
-
-      debugPrint("STATUS: ${response.statusCode}");
-      debugPrint("BODY: ${response.body}");
-
-      if (response.statusCode != 200) {
-        return "AI sedang sibuk sejenak (${response.statusCode}). Coba lagi nanti ya!";
-      }
-
-      final data = jsonDecode(response.body);
-      final text = data["candidates"]?[0]?["content"]?["parts"]?[0]?["text"];
-
-      return text ?? "AI tidak memberikan respon";
+      return await _aiService.complete(prompt);
+    } on AiException catch (e) {
+      return e.message;
     } catch (e) {
-      debugPrint("ERROR GEMINI: $e");
+      debugPrint("AI gagal memproses insight: ${e.runtimeType}");
       return "AI gagal membaca data transaksi kamu 😅";
     }
   }
@@ -136,6 +111,7 @@ Berikan insight singkat (1-2 kalimat), ramah, memotivasi, dan solutif ala financ
 
   @override
   void dispose() {
+    _aiService.dispose();
     _scrollController.dispose();
     super.dispose();
   }
