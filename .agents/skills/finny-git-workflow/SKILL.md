@@ -2,7 +2,7 @@
 name: finny-git-workflow
 description: >-
   Gunakan skill ini setiap kali user meminta perbaikan bug, mempercantik UI, menambah fitur, atau modifikasi kode pada finny_app.
-  Memastikan pengecekan keamanan Gemini API key di chat_screen.dart dan home_screen.dart, mengembalikan kunci sementara, dan langsung melakukan commit & push ke GitHub main.
+  Memastikan pengecekan keamanan API key AI universal di chat_screen.dart dan home_screen.dart, mengembalikan kunci sementara, dan langsung melakukan commit & push ke GitHub main.
 ---
 
 # Finny App Development & Safe Push Workflow
@@ -21,9 +21,9 @@ Periksa dua file utama ini sebelum melakukan commit:
 2. `lib/presentation/screens/home/home_screen.dart`
 
 **Aturan Keamanan**:
-* Kedua file di atas **WAJIB** menggunakan `ApiConstants.geminiApiKey` dari `lib/core/constants/api_constants.dart`.
+* Kedua file di atas **WAJIB** menggunakan `ApiConstants.aiApiKey` dari `lib/core/constants/api_constants.dart`. Base URL dan model menggunakan `ApiConstants.aiBaseUrl` serta `ApiConstants.aiModel`; pertahankan konfigurasi penyedia yang dipilih user.
 * **DILARANG KERAS** membiarkan API Key asli tertulis langsung (*hardcoded*) di dalam source code, baik di variabel `apiKey` maupun di parameter query URL `...key=$apiKey`.
-* Jika API Key sempat diubah sementara untuk pengetesan lokal, **segera kembalikan** ke `ApiConstants.geminiApiKey`.
+* Jika API Key sempat diubah sementara untuk pengetesan lokal, **segera kembalikan** ke `ApiConstants.aiApiKey`.
 * API Key rahasia hanya boleh berada di file lokal `secrets.json` yang diabaikan oleh `.gitignore`.
 
 ### 3. Verifikasi Keamanan Sebelum Commit

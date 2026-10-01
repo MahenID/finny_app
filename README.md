@@ -26,8 +26,8 @@ Key dikirim melalui header `Authorization: Bearer`, bukan parameter URL.
 Integrasi mendukung **OpenAI-compatible Chat Completions**, tanpa model atau
 host penyedia yang dikunci di kode. Contohnya, [Groq](https://console.groq.com/docs/openai)
 memakai base URL `https://api.groq.com/openai/v1`.
-API native dengan format lain, seperti Anthropic `/messages`, OpenAI `/responses`,
-atau Gemini `generateContent`, memerlukan endpoint kompatibel atau adapter lain.
+API native dengan format lain, seperti Anthropic `/messages` atau OpenAI
+`/responses`, memerlukan endpoint kompatibel atau adapter lain.
 
 `AI_MODEL` boleh kosong. Aplikasi mencoba mengambil daftar dari endpoint `/models`
 di base API yang sama, melewati model audio/gambar/embedding yang dikenali, lalu
@@ -37,7 +37,6 @@ mendukung chat, atau Anda ingin memilih sendiri, isi `AI_MODEL` dengan ID model
 chat dari penyedia. Tidak semua API dapat digunakan dengan URL dan key saja.
 Untuk server lokal tanpa autentikasi, `AI_API_KEY` boleh kosong.
 
-Konfigurasi lama `GEMINI_BASE_URL` dan `GEMINI_API_KEY` tidak dipakai lagi oleh AI.
 File `secrets.json` diabaikan Git; jangan menulis key asli di source Dart.
 
 Jalankan aplikasi dengan:
