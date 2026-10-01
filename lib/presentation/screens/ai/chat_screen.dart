@@ -1,10 +1,10 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import '../../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_colors.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../../../../core/constants/api_constants.dart';
+import '../../../core/constants/api_constants.dart';
 import 'ai_history_screen.dart';
 
 class ChatScreen extends StatefulWidget {
@@ -17,6 +17,17 @@ class ChatScreen extends StatefulWidget {
 }
 
 class _ChatScreenState extends State<ChatScreen> {
+  // ===== KONFIGURASI AI: BASE URL & API KEY =====
+  // Isi kedua nilai ini di secrets.json pada root proyek:
+  // "GEMINI_BASE_URL": "https://generativelanguage.googleapis.com/v1beta"
+  // "GEMINI_API_KEY": "MASUKKAN_API_KEY_ANDA_DI_SINI"
+  // Base URL hanya sampai /v1beta, tanpa /models/... atau ?key=....
+  // Key dibaca dari file lokal; jangan tulis key asli di file Dart ini.
+  // Setelah mengubah secrets.json, jalankan ulang aplikasi dengan:
+  // flutter run --dart-define-from-file=secrets.json
+  final String baseUrl = ApiConstants.geminiBaseUrl;
+  final String apiKey = ApiConstants.geminiApiKey;
+
   final Color chatThemeColor = AppColors.accentGreen;
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
@@ -38,9 +49,6 @@ class _ChatScreenState extends State<ChatScreen> {
     "💰 Berapa sisa saldo aktif?",
     "📈 Pengeluaran terbesar di apa?",
   ];
-
-  // 🔥 API Key Gemini diambil dari ApiConstants (Wajib sesuai aturan keamanan)
-  final String apiKey = ApiConstants.geminiApiKey;
 
   @override
   void dispose() {
@@ -81,11 +89,13 @@ class _ChatScreenState extends State<ChatScreen> {
     }
 
     try {
-      final url =
-          "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=$apiKey";
+      final normalizedBaseUrl = baseUrl.trim().replaceFirst(RegExp(r'/+$'), '');
+      final url = Uri.parse(
+        "$normalizedBaseUrl/models/gemini-3.5-flash:generateContent",
+      ).replace(queryParameters: {"key": apiKey});
 
       final response = await http.post(
-        Uri.parse(url),
+        url,
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "contents": [
