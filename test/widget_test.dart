@@ -8,8 +8,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:finance1/main.dart';
+import 'package:finance1/presentation/screens/auth/login_screen.dart';
 import 'package:finance1/presentation/widgets/custom_bottom_nav.dart';
-
 void main() {
   testWidgets('Aplikasi MyApp dapat di-render tanpa crash (Smoke test)', (
     WidgetTester tester,
@@ -53,5 +53,29 @@ void main() {
 
     await tester.tap(find.text('Kantong'));
     expect(selectedIndex, 1);
+  });
+
+  testWidgets('LoginScreen dapat di-render dan tombol switch berfungsi', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: LoginScreen(),
+      ),
+    );
+
+    expect(find.text('Finny'), findsOneWidget);
+    expect(find.text('Masuk'), findsOneWidget);
+    expect(find.text('Daftar Akun'), findsOneWidget);
+    expect(find.text('Alamat Email'), findsOneWidget);
+    expect(find.text('Kata Sandi'), findsOneWidget);
+    expect(find.text('Masuk ke Akun'), findsOneWidget);
+
+    // Tap Daftar Akun
+    await tester.tap(find.text('Daftar Akun'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Nama Lengkap'), findsOneWidget);
+    expect(find.text('Daftar Akun Baru'), findsOneWidget);
   });
 }
