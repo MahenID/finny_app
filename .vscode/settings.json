@@ -1,4 +1,7 @@
 {
   "java.configuration.updateBuildConfiguration": "interactive",
-  "cmake.sourceDirectory": "D:/VS Code/finance1/linux"
+  "cmake.sourceDirectory": "D:/VS Code/finance1/linux",
+  "dart.flutterRunAdditionalArgs": [
+    "--dart-define-from-file=secrets.json"
+  ]
 }
