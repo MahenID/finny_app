@@ -7,9 +7,9 @@ import '../../../core/utils/category_helper.dart';
 import '../../../core/utils/currency_helper.dart';
 import '../../../core/constants/api_constants.dart';
 import '../../../core/services/ai_service.dart';
-import '../transaction/add_transaction.dart';
+import '../transaction/add_transaction_screen.dart';
 import '../transaction/category_detail_screen.dart';
-import '../transaction/recent_activity.dart';
+import '../transaction/recent_activity_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final Function(int)? onNavigate;

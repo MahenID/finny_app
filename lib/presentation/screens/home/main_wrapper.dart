@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../widgets/custom_bottom_nav.dart';
-import '../transaction/add_transaction.dart';
+import '../transaction/add_transaction_screen.dart';
 
 import 'home_screen.dart';
 import '../transaction/pocket_screen.dart';

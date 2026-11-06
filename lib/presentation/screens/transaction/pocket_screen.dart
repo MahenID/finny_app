@@ -4,7 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/category_helper.dart';
 import '../../../../core/utils/currency_helper.dart';
-import 'add_transaction.dart';
+import 'add_transaction_screen.dart';
 import 'category_detail_screen.dart';
 
 class PocketScreen extends StatelessWidget {
