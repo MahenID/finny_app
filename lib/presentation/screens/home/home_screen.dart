@@ -10,7 +10,7 @@ import '../../../core/services/ai_service.dart';
 import '../transaction/add_transaction_screen.dart';
 import '../transaction/category_detail_screen.dart';
 import '../transaction/recent_activity_screen.dart';
-
+import '../../widgets/transaction_detail_modal.dart';
 class HomeScreen extends StatefulWidget {
   final Function(int)? onNavigate;
 
@@ -98,8 +98,30 @@ Berikan insight singkat (1-2 kalimat), ramah, memotivasi, dan solutif ala financ
   @override
   void initState() {
     super.initState();
+    _loadUserPreferences();
   }
 
+  Future<void> _loadUserPreferences() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+      if (doc.exists && mounted) {
+        final data = doc.data();
+        if (data?['currency'] != null) {
+          CurrencyHelper.setCurrency(data!['currency']);
+        }
+        if (data?['hideBalanceByDefault'] == true) {
+          setState(() {
+            _isBalanceVisible = false;
+          });
+        }
+      }
+    } catch (_) {}
+  }
   @override
   void dispose() {
     _aiService.dispose();
@@ -1138,6 +1160,19 @@ Berikan insight singkat (1-2 kalimat), ramah, memotivasi, dan solutif ala financ
                 subtitle: "$category • ${_formatFriendlyDate(date)}",
                 amountStr: "${isExpense ? '-' : '+'}${CurrencyHelper.format(amount)}",
                 isExpense: isExpense,
+                onTap: () {
+                  TransactionDetailModal.show(
+                    context: context,
+                    id: doc.id,
+                    amount: amount,
+                    type: type,
+                    category: category,
+                    note: title,
+                    date: date,
+                    icon: categoryIcon,
+                    color: categoryColor,
+                  );
+                },
               );
             });
           })(),
@@ -1152,70 +1187,75 @@ Berikan insight singkat (1-2 kalimat), ramah, memotivasi, dan solutif ala financ
     required String subtitle,
     required String amountStr,
     required bool isExpense,
+    VoidCallback? onTap,
   }) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.cardWhite,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.black.withValues(alpha: 0.03)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(11),
-            decoration: BoxDecoration(
-              color: categoryColor.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(14),
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(18),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppColors.cardWhite,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: Colors.black.withValues(alpha: 0.03)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.02),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
             ),
-            child: Icon(icon, color: categoryColor, size: 20),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14.5,
-                    color: AppColors.primaryText,
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(11),
+              decoration: BoxDecoration(
+                color: categoryColor.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Icon(icon, color: categoryColor, size: 20),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14.5,
+                      color: AppColors.primaryText,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  subtitle,
-                  style: const TextStyle(
-                    color: AppColors.secondaryText,
-                    fontSize: 11.5,
+                  const SizedBox(height: 3),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(
+                      color: AppColors.secondaryText,
+                      fontSize: 11.5,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          const SizedBox(width: 8),
-          Text(
-            amountStr,
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 14.5,
-              color: isExpense ? AppColors.expenseRed : AppColors.incomeGreen,
+            const SizedBox(width: 8),
+            Text(
+              amountStr,
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 14.5,
+                color: isExpense ? AppColors.expenseRed : AppColors.incomeGreen,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

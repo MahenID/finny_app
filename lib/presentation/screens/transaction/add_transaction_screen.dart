@@ -6,7 +6,24 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/category_helper.dart';
 
 class AddTransactionScreen extends StatefulWidget {
-  const AddTransactionScreen({super.key});
+  final String? transactionId;
+  final int? initialAmount;
+  final String? initialType;
+  final String? initialCategory;
+  final String? initialNote;
+  final DateTime? initialDate;
+
+  const AddTransactionScreen({
+    super.key,
+    this.transactionId,
+    this.initialAmount,
+    this.initialType,
+    this.initialCategory,
+    this.initialNote,
+    this.initialDate,
+  });
+
+  bool get isEdit => transactionId != null;
 
   @override
   State<AddTransactionScreen> createState() => _AddTransactionScreenState();
@@ -15,7 +32,6 @@ class AddTransactionScreen extends StatefulWidget {
 class _AddTransactionScreenState extends State<AddTransactionScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  // 0: Pengeluaran, 1: Pendapatan
   int _selectedTypeIndex = 0;
   String _selectedCategory = 'Makan';
   DateTime _selectedDate = DateTime.now();
@@ -24,6 +40,25 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   final TextEditingController _noteController = TextEditingController();
   bool _isSubmitting = false;
 
+  @override
+  void initState() {
+    super.initState();
+    if (widget.isEdit) {
+      _selectedTypeIndex = widget.initialType == 'income' ? 1 : 0;
+      if (widget.initialCategory != null && widget.initialCategory!.isNotEmpty) {
+        _selectedCategory = widget.initialCategory!;
+      }
+      if (widget.initialDate != null) {
+        _selectedDate = widget.initialDate!;
+      }
+      if (widget.initialAmount != null) {
+        _amountController.text = widget.initialAmount.toString();
+      }
+      if (widget.initialNote != null && widget.initialNote != '-') {
+        _noteController.text = widget.initialNote!;
+      }
+    }
+  }
   final List<Map<String, dynamic>> _expenseCategories = [
     {'title': 'Makan'},
     {'title': 'Minuman'},
@@ -152,17 +187,30 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     });
 
     try {
-      await _firestore.collection('transactions').add({
-        "userId": user.uid,
-        "type": _selectedTypeIndex == 0 ? "expense" : "income",
-        "amount": amount,
-        "category": _selectedCategory,
-        "note": _noteController.text.trim().isEmpty
-            ? "-"
-            : _noteController.text.trim(),
-        "date": Timestamp.fromDate(_selectedDate),
-        "createdAt": FieldValue.serverTimestamp(),
-      });
+      if (widget.isEdit) {
+        await _firestore.collection('transactions').doc(widget.transactionId).update({
+          "type": _selectedTypeIndex == 0 ? "expense" : "income",
+          "amount": amount,
+          "category": _selectedCategory,
+          "note": _noteController.text.trim().isEmpty
+              ? "-"
+              : _noteController.text.trim(),
+          "date": Timestamp.fromDate(_selectedDate),
+          "updatedAt": FieldValue.serverTimestamp(),
+        });
+      } else {
+        await _firestore.collection('transactions').add({
+          "userId": user.uid,
+          "type": _selectedTypeIndex == 0 ? "expense" : "income",
+          "amount": amount,
+          "category": _selectedCategory,
+          "note": _noteController.text.trim().isEmpty
+              ? "-"
+              : _noteController.text.trim(),
+          "date": Timestamp.fromDate(_selectedDate),
+          "createdAt": FieldValue.serverTimestamp(),
+        });
+      }
 
       if (!mounted) return;
 
@@ -173,7 +221,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
               const Icon(Icons.check_circle_rounded, color: Colors.white),
               const SizedBox(width: 10),
               Text(
-                "${_selectedTypeIndex == 0 ? 'Pengeluaran' : 'Pendapatan'} berhasil disimpan!",
+                widget.isEdit
+                    ? "Transaksi berhasil diperbarui!"
+                    : "${_selectedTypeIndex == 0 ? 'Pengeluaran' : 'Pendapatan'} berhasil disimpan!",
               ),
             ],
           ),
@@ -183,7 +233,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         ),
       );
 
-      Navigator.popUntil(context, (route) => route.isFirst);
+      Navigator.pop(context, true);
     } catch (e) {
       debugPrint("ERROR FIRESTORE: $e");
       if (!mounted) return;
@@ -301,9 +351,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
               ),
             ),
           ),
-          const Text(
-            "Tambah Transaksi",
-            style: TextStyle(
+          Text(
+            widget.isEdit ? "Edit Transaksi" : "Tambah Transaksi",
+            style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w800,
               color: AppColors.primaryText,
@@ -861,9 +911,11 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                   const Icon(Icons.check_rounded, color: Colors.white, size: 20),
                   const SizedBox(width: 8),
                   Text(
-                    _selectedTypeIndex == 0
-                        ? "Simpan Pengeluaran"
-                        : "Simpan Pendapatan",
+                    widget.isEdit
+                        ? "Simpan Perubahan"
+                        : (_selectedTypeIndex == 0
+                            ? "Simpan Pengeluaran"
+                            : "Simpan Pendapatan"),
                     style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,

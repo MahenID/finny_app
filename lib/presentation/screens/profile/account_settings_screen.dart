@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/utils/currency_helper.dart';
 import 'change_password_screen.dart';
 import 'language_screen.dart';
 
@@ -49,6 +50,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
 
       setState(() {
         _currency = data?['currency'] ?? 'IDR';
+        CurrencyHelper.setCurrency(_currency);
         _budgetCycleDay = (data?['budgetCycleDay'] as num?)?.toInt() ?? 1;
         _hideBalanceByDefault = data?['hideBalanceByDefault'] ?? false;
 
@@ -134,6 +136,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
                     setState(() {
                       _currency = curr['code']!;
                     });
+                    CurrencyHelper.setCurrency(curr['code']!);
                     await _saveSettings({'currency': curr['code']});
                     if (ctx.mounted) Navigator.pop(ctx);
                   },

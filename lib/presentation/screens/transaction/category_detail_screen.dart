@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../../../core/utils/category_helper.dart';
 import '../../../../core/utils/currency_helper.dart';
+import '../../widgets/transaction_detail_modal.dart';
 class CategoryDetailScreen extends StatelessWidget {
   final String title;
   final String emoji;
@@ -177,61 +178,77 @@ class CategoryDetailScreen extends StatelessWidget {
                           date = (data["createdAt"] as Timestamp).toDate();
                         }
 
-                        return Container(
-                          margin: const EdgeInsets.only(bottom: 14),
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(20),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: .05),
-                                blurRadius: 10,
-                              ),
-                            ],
-                          ),
-                          child: Row(
-                            children: [
-                              CircleAvatar(
-                                radius: 24,
-                                backgroundColor: color.withValues(alpha: .12),
-                                child: Icon(
-                                  CategoryHelper.getIcon(title),
-                                  color: color,
+                        return InkWell(
+                          onTap: () {
+                            TransactionDetailModal.show(
+                              context: context,
+                              id: e.id,
+                              amount: amount,
+                              type: type,
+                              category: title,
+                              note: note,
+                              date: date,
+                              icon: CategoryHelper.getIcon(title),
+                              color: color,
+                            );
+                          },
+                          borderRadius: BorderRadius.circular(20),
+                          child: Container(
+                            margin: const EdgeInsets.only(bottom: 14),
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(20),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: .05),
+                                  blurRadius: 10,
                                 ),
-                              ),
-                              const SizedBox(width: 14),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      note,
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
+                              ],
+                            ),
+                            child: Row(
+                              children: [
+                                CircleAvatar(
+                                  radius: 24,
+                                  backgroundColor: color.withValues(alpha: .12),
+                                  child: Icon(
+                                    CategoryHelper.getIcon(title),
+                                    color: color,
+                                  ),
+                                ),
+                                const SizedBox(width: 14),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        note,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                       ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      "${date.day}/${date.month}/${date.year}",
-                                      style: const TextStyle(
-                                        color: Colors.grey,
-                                        fontSize: 12,
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        "${date.day}/${date.month}/${date.year}",
+                                        style: const TextStyle(
+                                          color: Colors.grey,
+                                          fontSize: 12,
+                                        ),
                                       ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
-                              ),
-                              Text(
-                                "${type == "expense" ? "-" : "+"}${CurrencyHelper.format(amount)}",
-                                style: TextStyle(
-                                  color: type == "expense"
-                                      ? Colors.red
-                                      : Colors.green,
-                                  fontWeight: FontWeight.bold,
+                                Text(
+                                  "${type == "expense" ? "-" : "+"}${CurrencyHelper.format(amount)}",
+                                  style: TextStyle(
+                                    color: type == "expense"
+                                        ? Colors.red
+                                        : Colors.green,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         );
                       }),

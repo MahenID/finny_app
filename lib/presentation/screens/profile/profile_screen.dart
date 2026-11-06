@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/currency_helper.dart';
 import '../../widgets/premium_paywall.dart';
@@ -233,6 +233,41 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ],
         ),
         actions: [
+          OutlinedButton.icon(
+            onPressed: () async {
+              final user = FirebaseAuth.instance.currentUser;
+              final now = DateTime.now();
+              final summaryText = """
+REKAP FINANSIAL FINNY
+Nama: $_userName (${user?.email ?? '-'})
+Waktu: ${now.day}/${now.month}/${now.year}
+
+- Total Pemasukan: ${CurrencyHelper.format(_income)}
+- Total Pengeluaran: ${CurrencyHelper.format(_expense)}
+- Sisa Saldo Bersih: ${CurrencyHelper.format(_balance)}
+- Total Transaksi: $_transactionCount transaksi
+- Batas Anggaran Bulanan: ${CurrencyHelper.format(_monthlyBudgetLimit)}
+""";
+              await Clipboard.setData(ClipboardData(text: summaryText));
+              if (ctx.mounted) Navigator.pop(ctx);
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text("Rekap finansial berhasil disalin ke clipboard!"),
+                    backgroundColor: AppColors.accentGreen,
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              }
+            },
+            icon: const Icon(Icons.copy_rounded, size: 16),
+            label: const Text("Salin Rekap"),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppColors.primaryText,
+              side: BorderSide(color: Colors.grey.shade300),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx),
             style: ElevatedButton.styleFrom(

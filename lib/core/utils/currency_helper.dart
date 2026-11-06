@@ -1,12 +1,41 @@
 class CurrencyHelper {
-  /// Format angka integer atau double ke format Rupiah standar Indonesia.
-  /// Contoh: 1500000 -> "Rp 1.500.000"
-  ///         -25000  -> "-Rp 25.000"
-  static String format(num amount, {bool showPrefix = true, bool showSign = false}) {
+  static String _currentCurrencyCode = 'IDR';
+
+  static void setCurrency(String code) {
+    if (code.trim().isNotEmpty) {
+      _currentCurrencyCode = code.trim().toUpperCase();
+    }
+  }
+
+  static String get currentCurrencyCode => _currentCurrencyCode;
+
+  static String getSymbol([String? code]) {
+    final currency = (code ?? _currentCurrencyCode).toUpperCase();
+    switch (currency) {
+      case 'USD':
+        return '\$ ';
+      case 'SGD':
+        return 'S\$ ';
+      case 'MYR':
+        return 'RM ';
+      case 'EUR':
+        return '€ ';
+      case 'IDR':
+      default:
+        return 'Rp ';
+    }
+  }
+
+  /// Format angka integer atau double ke format mata uang standar.
+  static String format(
+    num amount, {
+    bool showPrefix = true,
+    bool showSign = false,
+    String? currencyCode,
+  }) {
     final bool isNegative = amount < 0;
     final int absoluteVal = amount.abs().toInt();
 
-    // Format dengan separator titik setiap 3 digit
     final String strVal = absoluteVal.toString();
     final StringBuffer buffer = StringBuffer();
 
@@ -19,7 +48,8 @@ class CurrencyHelper {
       }
     }
 
-    final String formattedNumber = buffer.toString().split('').reversed.join('');
+    final String formattedNumber =
+        buffer.toString().split('').reversed.join('');
 
     String result = '';
     if (isNegative) {
@@ -29,7 +59,8 @@ class CurrencyHelper {
     }
 
     if (showPrefix) {
-      result += 'Rp $formattedNumber';
+      final symbol = getSymbol(currencyCode);
+      result += '$symbol$formattedNumber';
     } else {
       result += formattedNumber;
     }
