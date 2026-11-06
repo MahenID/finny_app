@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../auth/otp_screen.dart'; // Import halaman OTP
-import '../auth/login_screen.dart'; // Import halaman Login untuk akhir alur
 
 class ChangePasswordScreen extends StatefulWidget {
   const ChangePasswordScreen({super.key});
@@ -12,54 +11,89 @@ class ChangePasswordScreen extends StatefulWidget {
 
 class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   final TextEditingController _oldPasswordController = TextEditingController();
-  bool _isObscure = true;
+  final TextEditingController _newPasswordController = TextEditingController();
+  final TextEditingController _confirmPasswordController = TextEditingController();
+
+  bool _isObscureOld = true;
+  bool _isObscureNew = true;
+  bool _isObscureConfirm = true;
+  bool _isLoading = false;
   String? _errorText;
 
   @override
   void dispose() {
     _oldPasswordController.dispose();
+    _newPasswordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
-  void _sendOtp() async {
+  Future<void> _updatePassword() async {
     setState(() => _errorText = null);
 
-    if (_oldPasswordController.text.isEmpty) {
-      setState(() => _errorText = "Password saat ini tidak boleh kosong");
-    } else {
-      // 1. Navigasi ke OTP (Membawa isFromForgotPassword = true agar alurnya ke Buat Sandi Baru)
-      final result = await Navigator.push(
-        context,
-        MaterialPageRoute(
-          // Ganti email dummy di bawah ini dengan email user yang login nantinya
-          builder: (context) => const OtpScreen(
-            email: "user@email.com",
-            isFromForgotPassword: true,
-          ),
+    final oldPassword = _oldPasswordController.text;
+    final newPassword = _newPasswordController.text;
+    final confirmPassword = _confirmPasswordController.text;
+
+    if (oldPassword.isEmpty) {
+      setState(() => _errorText = "Kata sandi saat ini tidak boleh kosong");
+      return;
+    }
+    if (newPassword.length < 6) {
+      setState(() => _errorText = "Kata sandi baru minimal 6 karakter");
+      return;
+    }
+    if (newPassword != confirmPassword) {
+      setState(() => _errorText = "Konfirmasi kata sandi baru tidak cocok");
+      return;
+    }
+    if (oldPassword == newPassword) {
+      setState(() => _errorText = "Kata sandi baru tidak boleh sama dengan kata sandi lama");
+      return;
+    }
+
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null || user.email == null) {
+      setState(() => _errorText = "Sesi telah berakhir. Silakan login kembali.");
+      return;
+    }
+
+    setState(() => _isLoading = true);
+    try {
+      final cred = EmailAuthProvider.credential(
+        email: user.email!,
+        password: oldPassword,
+      );
+      await user.reauthenticateWithCredential(cred);
+      await user.updatePassword(newPassword);
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Kata sandi berhasil diperbarui!"),
+          backgroundColor: AppColors.accentGreen,
+          duration: Duration(seconds: 2),
         ),
       );
-
-      // 2. Jika seluruh alur (OTP -> Buat Sandi) berhasil dan melempar nilai true kembali ke sini
-      if (result == true && mounted) {
-        // Tampilkan pesan sukses hijau
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Password berhasil diubah! Silakan masuk kembali."),
-            backgroundColor: AppColors.accentGreen,
-            duration: Duration(seconds: 2),
-          ),
-        );
-
-        // 3. Lempar user ke halaman Login dan hapus semua riwayat halaman sebelumnya
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (context) => const LoginScreen()),
-          (route) => false,
-        );
+      Navigator.pop(context, true);
+    } on FirebaseAuthException catch (e) {
+      if (!mounted) return;
+      if (e.code == 'wrong-password' || e.code == 'invalid-credential') {
+        setState(() => _errorText = "Kata sandi saat ini salah.");
+      } else if (e.code == 'weak-password') {
+        setState(() => _errorText = "Kata sandi terlalu lemah.");
+      } else {
+        setState(() => _errorText = e.message ?? "Gagal mengubah kata sandi.");
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _errorText = "Terjadi kesalahan: $e");
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
       }
     }
   }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -107,18 +141,18 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
               ),
               const SizedBox(height: 12),
               const Text(
-                "Masukkan kata sandi Anda saat ini untuk keamanan. Kami akan mengirimkan kode OTP ke email Anda untuk proses selanjutnya.",
+                "Masukkan kata sandi saat ini dan tentukan kata sandi baru untuk akun Finny kamu.",
                 style: TextStyle(
                   fontSize: 14,
                   color: Colors.blueGrey,
                   height: 1.5,
                 ),
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 24),
 
-              // --- INPUT KATA SANDI LAMA ---
+              // 1. Password Saat Ini
               const Text(
-                "Password Saat Ini",
+                "Kata Sandi Saat Ini",
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.bold,
@@ -128,22 +162,16 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
               const SizedBox(height: 8),
               TextField(
                 controller: _oldPasswordController,
-                obscureText: _isObscure,
+                obscureText: _isObscureOld,
                 style: const TextStyle(color: Color(0xFF1E293B), fontSize: 15),
                 decoration: InputDecoration(
-                  hintText: "Masukkan kata sandi lama",
+                  hintText: "Masukkan kata sandi saat ini",
                   hintStyle: TextStyle(color: Colors.grey.shade400),
-                  prefixIcon: Icon(
-                    Icons.lock_outline,
-                    color: Colors.grey.shade400,
-                    size: 22,
-                  ),
+                  prefixIcon: Icon(Icons.lock_outline, color: Colors.grey.shade400, size: 22),
                   suffixIcon: GestureDetector(
-                    onTap: () => setState(() => _isObscure = !_isObscure),
+                    onTap: () => setState(() => _isObscureOld = !_isObscureOld),
                     child: Icon(
-                      _isObscure
-                          ? Icons.visibility_off_outlined
-                          : Icons.visibility_outlined,
+                      _isObscureOld ? Icons.visibility_off_outlined : Icons.visibility_outlined,
                       color: Colors.grey.shade400,
                       size: 20,
                     ),
@@ -151,44 +179,96 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                   filled: true,
                   fillColor: Colors.white,
                   contentPadding: const EdgeInsets.symmetric(vertical: 16),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide(
-                      color: _errorText != null
-                          ? Colors.red.shade300
-                          : Colors.grey.shade300,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                ),
+              ),
+              const SizedBox(height: 18),
+
+              // 2. Password Baru
+              const Text(
+                "Kata Sandi Baru",
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.blueGrey,
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _newPasswordController,
+                obscureText: _isObscureNew,
+                style: const TextStyle(color: Color(0xFF1E293B), fontSize: 15),
+                decoration: InputDecoration(
+                  hintText: "Minimal 6 karakter",
+                  hintStyle: TextStyle(color: Colors.grey.shade400),
+                  prefixIcon: Icon(Icons.lock_reset_rounded, color: Colors.grey.shade400, size: 22),
+                  suffixIcon: GestureDetector(
+                    onTap: () => setState(() => _isObscureNew = !_isObscureNew),
+                    child: Icon(
+                      _isObscureNew ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                      color: Colors.grey.shade400,
+                      size: 20,
                     ),
                   ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide(
-                      color: _errorText != null
-                          ? Colors.red.shade300
-                          : AppColors.accentGreen,
-                      width: 1.5,
+                  filled: true,
+                  fillColor: Colors.white,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 16),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                ),
+              ),
+              const SizedBox(height: 18),
+
+              // 3. Konfirmasi Password Baru
+              const Text(
+                "Konfirmasi Kata Sandi Baru",
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.blueGrey,
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _confirmPasswordController,
+                obscureText: _isObscureConfirm,
+                style: const TextStyle(color: Color(0xFF1E293B), fontSize: 15),
+                decoration: InputDecoration(
+                  hintText: "Ulangi kata sandi baru",
+                  hintStyle: TextStyle(color: Colors.grey.shade400),
+                  prefixIcon: Icon(Icons.check_circle_outline, color: Colors.grey.shade400, size: 22),
+                  suffixIcon: GestureDetector(
+                    onTap: () => setState(() => _isObscureConfirm = !_isObscureConfirm),
+                    child: Icon(
+                      _isObscureConfirm ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                      color: Colors.grey.shade400,
+                      size: 20,
                     ),
                   ),
+                  filled: true,
+                  fillColor: Colors.white,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 16),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
                 ),
               ),
               if (_errorText != null)
                 Padding(
-                  padding: const EdgeInsets.only(top: 8, left: 4),
+                  padding: const EdgeInsets.only(top: 12, left: 4),
                   child: Text(
                     _errorText!,
                     style: const TextStyle(
                       color: Colors.red,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 28),
 
-              // --- TOMBOL KIRIM OTP ---
+              // --- TOMBOL SIMPAN ---
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: _sendOtp,
+                  onPressed: _isLoading ? null : _updatePassword,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.accentGreen,
                     padding: const EdgeInsets.symmetric(vertical: 16),
@@ -197,14 +277,23 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                     ),
                     elevation: 0,
                   ),
-                  child: const Text(
-                    "Kirim Kode OTP",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                  ),
+                  child: _isLoading
+                      ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text(
+                          "Simpan Kata Sandi Baru",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
                 ),
               ),
             ],

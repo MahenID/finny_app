@@ -115,28 +115,20 @@ class _LoginScreenState extends State<LoginScreen> {
         final credential = await FirebaseAuth.instance
             .createUserWithEmailAndPassword(email: email, password: password);
 
-        await credential.user!.sendEmailVerification();
+        if (credential.user != null) {
+          await credential.user!.updateDisplayName(name);
+          await credential.user!.sendEmailVerification();
 
-        // 🔥 simpan ke Firestore (collection = "users")
-        await FirebaseFirestore.instance.collection("users").doc(credential.user!.uid).set({
-          "name": name,
-          "email": email,
-          "createdAt": Timestamp.now(),
-        });
-
-        // ignore: use_build_context_synchronously
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Akun berhasil dibuat! Cek email untuk verifikasi."),
-          ),
-        );
-
-        // 🔥 logout dulu agar tidak auto masuk
-        await FirebaseAuth.instance.signOut();
-
-        setState(() {
-          _isLogin = true;
-        });
+          await FirebaseFirestore.instance
+              .collection("users")
+              .doc(credential.user!.uid)
+              .set({
+            "name": name,
+            "email": email,
+            "createdAt": Timestamp.now(),
+          });
+        }
+        // AuthWrapper langsung mengarahkan ke VerifyEmailScreen
       } on FirebaseAuthException catch (e) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(

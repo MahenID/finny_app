@@ -86,11 +86,35 @@ class _ChatScreenState extends State<ChatScreen> {
           .where("userId", isEqualTo: user.uid)
           .get();
 
-      List<Map<String, dynamic>> transaksi = [];
+      final sortedDocs = List.from(snapshot.docs);
+      sortedDocs.sort((a, b) {
+        final dataA = a.data() as Map<String, dynamic>;
+        final dataB = b.data() as Map<String, dynamic>;
+        final timeA = (dataA['date'] is Timestamp)
+            ? (dataA['date'] as Timestamp).millisecondsSinceEpoch
+            : ((dataA['createdAt'] is Timestamp)
+                ? (dataA['createdAt'] as Timestamp).millisecondsSinceEpoch
+                : 0);
+        final timeB = (dataB['date'] is Timestamp)
+            ? (dataB['date'] as Timestamp).millisecondsSinceEpoch
+            : ((dataB['createdAt'] is Timestamp)
+                ? (dataB['createdAt'] as Timestamp).millisecondsSinceEpoch
+                : 0);
+        return timeB.compareTo(timeA);
+      });
 
-      for (var doc in snapshot.docs) {
-        transaksi.add(doc.data());
-      }
+      final List<String> transaksiList = sortedDocs.take(40).map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        final type = data['type'] == 'income' ? 'Pemasukan' : 'Pengeluaran';
+        final amount = (data['amount'] as num?)?.toInt() ?? 0;
+        final category = data['category'] ?? '-';
+        final note = data['note'] ?? '-';
+        return "- $type: Rp $amount | Kategori: $category | Catatan: $note";
+      }).toList();
+
+      final String transaksiRingkasan = transaksiList.isEmpty
+          ? "Belum ada riwayat transaksi."
+          : transaksiList.join("\n");
 
       return await _aiService.complete("""
 Kamu adalah Finny AI, asisten keuangan pribadi yang cerdas, ramah, dan solutif.
@@ -108,8 +132,8 @@ ATURAN YANG HARUS DIIKUTI:
 
 3. Berikan jawaban yang ringkas, mudah dipahami, bernada ramah (gunakan emoji secukupnya), dan langsung pada inti informasi.
 
-DATA TRANSAKSI PENGGUNA DARI FIRESTORE:
-$transaksi
+RIWAYAT TRANSAKSI TERAKHIR PENGGUNA:
+$transaksiRingkasan
 
 PERTANYAAN PENGGUNA:
 $prompt

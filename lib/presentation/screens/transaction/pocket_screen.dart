@@ -66,7 +66,7 @@ class PocketScreen extends StatelessWidget {
 
                   for (var doc in docs) {
                     final data = doc.data() as Map<String, dynamic>;
-                    final int amount = (data['amount'] ?? 0) as int;
+                    final int amount = (data['amount'] as num?)?.toInt() ?? 0;
                     final String type = data['type'] ?? 'expense';
                     final String category = data['category'] ?? 'Lainnya';
 

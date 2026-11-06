@@ -58,7 +58,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
       for (var item in transactions.docs) {
         final trx = item.data();
-        final amount = (trx["amount"] ?? 0) as int;
+        final amount = (trx["amount"] as num?)?.toInt() ?? 0;
         if (trx["type"] == "income") {
           income += amount;
         } else {
@@ -72,7 +72,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _userName = userData?["name"] ?? user.displayName ?? "Pengguna Finny";
         _userEmail = user.email ?? "-";
         _userPhone = userData?["phone"] ?? "-";
-        _monthlyBudgetLimit = (userData?["monthlyBudgetLimit"] ?? 5000000) as int;
+        _monthlyBudgetLimit = (userData?["monthlyBudgetLimit"] as num?)?.toInt() ?? 5000000;
 
         _income = income;
         _expense = expense;
@@ -106,9 +106,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (result != null && result is Map) {
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
+        final String? newName = result["name"] as String?;
+        final String? newPhone = result["phone"] as String?;
+        if (newName != null && newName.trim().isNotEmpty) {
+          try {
+            await user.updateDisplayName(newName.trim());
+          } catch (_) {}
+        }
         await FirebaseFirestore.instance.collection("users").doc(user.uid).set({
-          "name": result["name"],
-          "phone": result["phone"],
+          "name": newName,
+          "phone": newPhone,
         }, SetOptions(merge: true));
         _loadUser();
       }

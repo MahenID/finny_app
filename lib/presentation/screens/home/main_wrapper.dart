@@ -30,34 +30,16 @@ class _MainWrapperState extends State<MainWrapper> {
 
   @override
   Widget build(BuildContext context) {
-    final List<Widget> screens = [
-      HomeScreen(onNavigate: _changeTab),
-      PocketScreen(onNavigate: _changeTab),
-      const ChatScreen(),
-      ProfileScreen(onNavigate: _changeTab),
-    ];
-
     return Scaffold(
       backgroundColor: AppColors.background,
-
-      // DIEDIT TOTAL: Animasi Memudar (Fade) yang Smooth dan Ringan
-      body: Padding(
-        padding: const EdgeInsets.only(bottom: 20), // 🔥 TAMBAHKAN DI SINI
-        child: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 250),
-          transitionBuilder: (Widget child, Animation<double> animation) {
-            final CurvedAnimation curvedAnimation = CurvedAnimation(
-              parent: animation,
-              curve: Curves.easeInOut,
-            );
-
-            return FadeTransition(opacity: curvedAnimation, child: child);
-          },
-          child: SizedBox(
-            key: ValueKey<int>(_currentIndex),
-            child: screens[_currentIndex],
-          ),
-        ),
+      body: IndexedStack(
+        index: _currentIndex,
+        children: [
+          HomeScreen(onNavigate: _changeTab),
+          PocketScreen(onNavigate: _changeTab),
+          const ChatScreen(),
+          ProfileScreen(onNavigate: _changeTab),
+        ],
       ),
 
       bottomNavigationBar: CustomBottomNav(

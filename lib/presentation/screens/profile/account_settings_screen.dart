@@ -49,7 +49,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
 
       setState(() {
         _currency = data?['currency'] ?? 'IDR';
-        _budgetCycleDay = (data?['budgetCycleDay'] ?? 1) as int;
+        _budgetCycleDay = (data?['budgetCycleDay'] as num?)?.toInt() ?? 1;
         _hideBalanceByDefault = data?['hideBalanceByDefault'] ?? false;
 
         _dailyReminder = data?['dailyReminder'] ?? true;

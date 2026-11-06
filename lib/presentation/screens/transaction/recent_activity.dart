@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/utils/category_helper.dart';
+import '../../../../core/utils/currency_helper.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-
 class RecentActivityScreen extends StatelessWidget {
   const RecentActivityScreen({super.key});
 
@@ -75,17 +76,33 @@ class RecentActivityScreen extends StatelessWidget {
             itemBuilder: (context, index) {
               final data = docs[index].data() as Map<String, dynamic>;
 
-              final amount = data['amount'] ?? 0;
-              final note = data['note'] ?? "-";
-              final type = data['type'] ?? 'expense';
-              final date = (data['date'] as Timestamp).toDate();
+              final num rawAmount = data['amount'] is num
+                  ? (data['amount'] as num)
+                  : (num.tryParse(data['amount']?.toString() ?? '0') ?? 0);
+              final int amount = rawAmount.toInt();
+              final String category = data['category'] ?? 'Lainnya';
+              final String note = (data['note'] != null && data['note'].toString().trim().isNotEmpty)
+                  ? data['note'].toString()
+                  : category;
+              final String type = data['type'] ?? 'expense';
+
+              DateTime date = DateTime.now();
+              if (data['date'] is Timestamp) {
+                date = (data['date'] as Timestamp).toDate();
+              } else if (data['createdAt'] is Timestamp) {
+                date = (data['createdAt'] as Timestamp).toDate();
+              }
+
+              final isExpense = type == 'expense';
+              final icon = CategoryHelper.getIcon(category);
+              final color = CategoryHelper.getColor(category);
 
               return _buildTransactionTile(
-                Icons.account_balance_wallet,
+                icon,
                 note,
                 "${date.day}/${date.month}/${date.year}",
-                "${type == 'expense' ? '-' : '+'}Rp $amount",
-                type == 'expense' ? Colors.red : Colors.green,
+                "${isExpense ? '-' : '+'}${CurrencyHelper.format(amount)}",
+                color,
               );
             },
           );

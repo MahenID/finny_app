@@ -257,27 +257,11 @@ class _EditIdentityScreenState
 
                       _buildTextField(
                         controller: _emailController,
-                        label: "Alamat Email",
-                        hint: "Masukkan email",
-
+                        label: "Alamat Email (Akun Utama)",
+                        hint: "Email pengguna",
                         icon: Icons.email_outlined,
-
-                        keyboardType:
-                            TextInputType.emailAddress,
-
-                        validator: (value) {
-
-                          if (value == null ||
-                              value.trim().isEmpty) {
-                            return "Email tidak boleh kosong";
-                          }
-
-                          if (!value.contains("@")) {
-                            return "Format email salah";
-                          }
-
-                          return null;
-                        },
+                        readOnly: true,
+                        helperText: "Email terhubung langsung dengan akun login Finny.",
                       ),
 
                       const SizedBox(height: 20),
@@ -397,6 +381,8 @@ class _EditIdentityScreenState
     Widget? prefix,
     TextInputType? keyboardType,
     String? Function(String?)? validator,
+    bool readOnly = false,
+    String? helperText,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -409,33 +395,32 @@ class _EditIdentityScreenState
             fontSize: 14,
           ),
         ),
-
         const SizedBox(height: 8),
-
         TextFormField(
           controller: controller,
+          readOnly: readOnly,
           keyboardType: keyboardType,
           validator: validator,
-
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: readOnly ? Colors.blueGrey.shade700 : const Color(0xFF1E293B),
+          ),
           decoration: InputDecoration(
             hintText: hint,
-
+            helperText: helperText,
+            helperStyle: const TextStyle(fontSize: 11.5, color: Colors.blueGrey),
             prefixIcon: prefix == null
                 ? Icon(icon, color: AppColors.accentGreen)
                 : null,
-
             prefix: prefix,
-
             suffixIcon: Icon(
-              Icons.edit_outlined,
+              readOnly ? Icons.lock_outline : Icons.edit_outlined,
               color: Colors.grey.shade400,
               size: 20,
             ),
-
             filled: true,
-            fillColor: Colors.grey.shade50,
+            fillColor: readOnly ? Colors.grey.shade100 : Colors.grey.shade50,
 
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 18,

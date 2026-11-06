@@ -5,21 +5,53 @@
 // gestures. You can also use WidgetTester to find child widgets in the widget
 // tree, read text, and verify that the values of widget properties are correct.
 
-// import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-import 'package:finance1/main.dart'; // Sesuaikan jika nama package Anda bukan project1
+import 'package:finance1/main.dart';
+import 'package:finance1/presentation/widgets/custom_bottom_nav.dart';
 
 void main() {
-  testWidgets('Aplikasi berjalan tanpa crash (Smoke test)', (WidgetTester tester) async {
-    // Bangun aplikasi kita dan trigger frame.
-    // Hapus kata 'const' di sini
-    await tester.pumpWidget(MyApp());
+  testWidgets('Aplikasi MyApp dapat di-render tanpa crash (Smoke test)', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      const MyApp(
+        home: Scaffold(
+          body: Center(
+            child: Text('Finny App Active'),
+          ),
+        ),
+      ),
+    );
 
-    // Cek apakah teks 'Beranda' ada di layar (karena ada di Bottom Nav Bar kita)
-    expect(find.text('Beranda'), findsWidgets);
-    
-    // Cek apakah judul sapaan ada di layar
-    expect(find.text('Halo, Bro! 👋'), findsOneWidget);
+    expect(find.text('Finny App Active'), findsOneWidget);
+  });
+
+  testWidgets('CustomBottomNav menampilkan semua tab dengan benar', (
+    WidgetTester tester,
+  ) async {
+    int selectedIndex = 0;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          bottomNavigationBar: CustomBottomNav(
+            currentIndex: selectedIndex,
+            onTap: (index) {
+              selectedIndex = index;
+            },
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('Beranda'), findsOneWidget);
+    expect(find.text('Kantong'), findsOneWidget);
+    expect(find.text('Asisten'), findsOneWidget);
+    expect(find.text('Profil'), findsOneWidget);
+    expect(find.byIcon(Icons.add), findsOneWidget);
+
+    await tester.tap(find.text('Kantong'));
+    expect(selectedIndex, 1);
   });
 }

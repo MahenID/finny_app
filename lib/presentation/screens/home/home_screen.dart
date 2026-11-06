@@ -98,15 +98,6 @@ Berikan insight singkat (1-2 kalimat), ramah, memotivasi, dan solutif ala financ
   @override
   void initState() {
     super.initState();
-
-    _scrollController.addListener(() {
-      if (_scrollController.hasClients) {
-        final maxScroll = _scrollController.position.maxScrollExtent;
-        if (maxScroll > 0) {
-          setState(() {});
-        }
-      }
-    });
   }
 
   @override
@@ -171,7 +162,7 @@ Berikan insight singkat (1-2 kalimat), ramah, memotivasi, dan solutif ala financ
 
         for (var doc in docs) {
           final data = doc.data() as Map<String, dynamic>;
-          final amount = (data['amount'] ?? 0) as int;
+          final amount = (data['amount'] as num?)?.toInt() ?? 0;
           final type = data['type'];
           final category = data['category'] ?? 'Lainnya';
 
@@ -266,12 +257,16 @@ Berikan insight singkat (1-2 kalimat), ramah, memotivasi, dan solutif ala financ
         ),
         GestureDetector(
           onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => const ProfileScreen(),
-              ),
-            );
+            if (widget.onNavigate != null) {
+              widget.onNavigate!(3);
+            } else {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const ProfileScreen(),
+                ),
+              );
+            }
           },
           child: Container(
             padding: const EdgeInsets.all(2.5),
@@ -1100,34 +1095,52 @@ Berikan insight singkat (1-2 kalimat), ramah, memotivasi, dan solutif ala financ
             ),
           )
         else
-          ...docs.take(5).map((doc) {
-            final data = doc.data() as Map<String, dynamic>;
-            final amount = (data['amount'] ?? 0) as int;
-            final note = data['note'] as String?;
-            final type = data['type'] ?? 'expense';
-            final category = data['category'] ?? 'Lainnya';
+          ...(() {
+            final sortedDocs = List.from(docs);
+            sortedDocs.sort((a, b) {
+              final dataA = a.data() as Map<String, dynamic>;
+              final dataB = b.data() as Map<String, dynamic>;
+              final timeA = (dataA['date'] is Timestamp)
+                  ? (dataA['date'] as Timestamp).millisecondsSinceEpoch
+                  : ((dataA['createdAt'] is Timestamp)
+                      ? (dataA['createdAt'] as Timestamp).millisecondsSinceEpoch
+                      : 0);
+              final timeB = (dataB['date'] is Timestamp)
+                  ? (dataB['date'] as Timestamp).millisecondsSinceEpoch
+                  : ((dataB['createdAt'] is Timestamp)
+                      ? (dataB['createdAt'] as Timestamp).millisecondsSinceEpoch
+                      : 0);
+              return timeB.compareTo(timeA);
+            });
+            return sortedDocs.take(5).map((doc) {
+              final data = doc.data() as Map<String, dynamic>;
+              final amount = (data['amount'] as num?)?.toInt() ?? 0;
+              final note = data['note'] as String?;
+              final type = data['type'] ?? 'expense';
+              final category = data['category'] ?? 'Lainnya';
 
-            DateTime date = DateTime.now();
-            if (data["createdAt"] != null) {
-              date = (data["createdAt"] as Timestamp).toDate();
-            } else if (data["date"] != null) {
-              date = (data["date"] as Timestamp).toDate();
-            }
+              DateTime date = DateTime.now();
+              if (data["date"] is Timestamp) {
+                date = (data["date"] as Timestamp).toDate();
+              } else if (data["createdAt"] is Timestamp) {
+                date = (data["createdAt"] as Timestamp).toDate();
+              }
 
-            final isExpense = type == 'expense';
-            final categoryColor = CategoryHelper.getColor(category);
-            final categoryIcon = CategoryHelper.getIcon(category);
-            final title = (note != null && note.trim().isNotEmpty) ? note : category;
+              final isExpense = type == 'expense';
+              final categoryColor = CategoryHelper.getColor(category);
+              final categoryIcon = CategoryHelper.getIcon(category);
+              final title = (note != null && note.trim().isNotEmpty) ? note : category;
 
-            return _buildModernTransactionItem(
-              icon: categoryIcon,
-              categoryColor: categoryColor,
-              title: title,
-              subtitle: "$category • ${_formatFriendlyDate(date)}",
-              amountStr: "${isExpense ? '-' : '+'}${CurrencyHelper.format(amount)}",
-              isExpense: isExpense,
-            );
-          }),
+              return _buildModernTransactionItem(
+                icon: categoryIcon,
+                categoryColor: categoryColor,
+                title: title,
+                subtitle: "$category • ${_formatFriendlyDate(date)}",
+                amountStr: "${isExpense ? '-' : '+'}${CurrencyHelper.format(amount)}",
+                isExpense: isExpense,
+              );
+            });
+          })(),
       ],
     );
   }

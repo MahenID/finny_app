@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-
 import '../../../../core/utils/category_helper.dart';
-
+import '../../../../core/utils/currency_helper.dart';
 class CategoryDetailScreen extends StatelessWidget {
   final String title;
   final String emoji;
@@ -31,7 +30,6 @@ class CategoryDetailScreen extends StatelessWidget {
             .collection("transactions")
             .where("userId", isEqualTo: user.uid)
             .where("category", isEqualTo: title)
-            .orderBy("createdAt", descending: true)
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -42,11 +40,26 @@ class CategoryDetailScreen extends StatelessWidget {
             return Center(child: Text(snapshot.error.toString()));
           }
 
-          final docs = snapshot.data?.docs ?? [];
+          final docs = List.from(snapshot.data?.docs ?? []);
+          docs.sort((a, b) {
+            final dataA = a.data() as Map<String, dynamic>;
+            final dataB = b.data() as Map<String, dynamic>;
+            final timeA = (dataA['date'] is Timestamp)
+                ? (dataA['date'] as Timestamp).millisecondsSinceEpoch
+                : ((dataA['createdAt'] is Timestamp)
+                    ? (dataA['createdAt'] as Timestamp).millisecondsSinceEpoch
+                    : 0);
+            final timeB = (dataB['date'] is Timestamp)
+                ? (dataB['date'] as Timestamp).millisecondsSinceEpoch
+                : ((dataB['createdAt'] is Timestamp)
+                    ? (dataB['createdAt'] as Timestamp).millisecondsSinceEpoch
+                    : 0);
+            return timeB.compareTo(timeA);
+          });
 
           int total = 0;
           for (var d in docs) {
-            total += ((d.data() as Map<String, dynamic>)["amount"] ?? 0) as int;
+            total += ((d.data() as Map<String, dynamic>)["amount"] as num?)?.toInt() ?? 0;
           }
 
           final average = docs.isEmpty ? 0 : (total ~/ docs.length);
@@ -79,10 +92,10 @@ class CategoryDetailScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          "Rp $total",
+                          CurrencyHelper.format(total),
                           style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 18,
+                            fontSize: 20,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -129,7 +142,7 @@ class CategoryDetailScreen extends StatelessWidget {
                             child: _info(
                               Icons.calculate,
                               "Rata-rata",
-                              "Rp $average",
+                              CurrencyHelper.format(average),
                               Colors.green,
                             ),
                           ),
@@ -152,12 +165,17 @@ class CategoryDetailScreen extends StatelessWidget {
                         ),
                       ...docs.map((e) {
                         final data = e.data() as Map<String, dynamic>;
-                        final amount = data["amount"] ?? 0;
-                        final note = data["note"] ?? "-";
+                        final amount = (data["amount"] as num?)?.toInt() ?? 0;
+                        final note = (data["note"] != null && data["note"].toString().trim().isNotEmpty)
+                            ? data["note"].toString()
+                            : title;
                         final type = data["type"] ?? "expense";
-                        final date = data["createdAt"] != null
-                            ? (data["createdAt"] as Timestamp).toDate()
-                            : DateTime.now();
+                        DateTime date = DateTime.now();
+                        if (data["date"] is Timestamp) {
+                          date = (data["date"] as Timestamp).toDate();
+                        } else if (data["createdAt"] is Timestamp) {
+                          date = (data["createdAt"] as Timestamp).toDate();
+                        }
 
                         return Container(
                           margin: const EdgeInsets.only(bottom: 14),
@@ -205,7 +223,7 @@ class CategoryDetailScreen extends StatelessWidget {
                                 ),
                               ),
                               Text(
-                                "${type == "expense" ? "-" : "+"}Rp $amount",
+                                "${type == "expense" ? "-" : "+"}${CurrencyHelper.format(amount)}",
                                 style: TextStyle(
                                   color: type == "expense"
                                       ? Colors.red

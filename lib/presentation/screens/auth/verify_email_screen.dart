@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-import '../home/main_wrapper.dart';
+import 'auth_wrapper.dart';
 import '../../../../core/theme/app_colors.dart';
 
 class VerifyEmailScreen extends StatefulWidget {
@@ -13,34 +13,94 @@ class VerifyEmailScreen extends StatefulWidget {
 
 class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
   bool loading = false;
+  bool resending = false;
 
   Future<void> checkVerification() async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) {
+      if (mounted) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const AuthWrapper()),
+          (route) => false,
+        );
+      }
+      return;
+    }
+
     setState(() {
       loading = true;
     });
 
-    await FirebaseAuth.instance.currentUser!.reload();
+    try {
+      await currentUser.reload();
+      if (!mounted) return;
+      final user = FirebaseAuth.instance.currentUser;
 
-    if (!mounted) return;
-
-    final user = FirebaseAuth.instance.currentUser;
-
-    if (user != null && user.emailVerified) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const MainWrapper()),
-      );
-    } else {
+      if (user != null && user.emailVerified) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Email berhasil diverifikasi!"),
+            backgroundColor: AppColors.accentGreen,
+          ),
+        );
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const AuthWrapper()),
+          (route) => false,
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Email belum diverifikasi. Cek kotak masuk atau spam."),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Email belum diverifikasi.")),
+        SnackBar(content: Text("Gagal memeriksa verifikasi: $e")),
       );
+    } finally {
+      if (mounted) {
+        setState(() {
+          loading = false;
+        });
+      }
     }
-
-    setState(() {
-      loading = false;
-    });
   }
 
+  Future<void> resendVerification() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    setState(() => resending = true);
+    try {
+      await user.sendEmailVerification();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Email verifikasi telah dikirim ulang."),
+          backgroundColor: AppColors.accentGreen,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Gagal mengirim ulang email: $e")),
+      );
+    } finally {
+      if (mounted) setState(() => resending = false);
+    }
+  }
+
+  Future<void> _logout() async {
+    await FirebaseAuth.instance.signOut();
+    if (!mounted) return;
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const AuthWrapper()),
+      (route) => false,
+    );
+  }
   @override
   Widget build(BuildContext context) {
     final email = FirebaseAuth.instance.currentUser?.email ?? "";
@@ -100,18 +160,23 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
               const SizedBox(height: 20),
 
               TextButton(
-                onPressed: () async {
-                  await FirebaseAuth.instance.currentUser!
-                      .sendEmailVerification();
-
-                  if (!context.mounted) return;
-
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Email dikirim ulang.")),
-                  );
-                },
-
-                child: const Text("Kirim Ulang Email"),
+                onPressed: resending ? null : resendVerification,
+                child: resending
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text("Kirim Ulang Email"),
+              ),
+              const SizedBox(height: 10),
+              TextButton.icon(
+                onPressed: _logout,
+                icon: const Icon(Icons.logout, size: 16, color: Colors.blueGrey),
+                label: const Text(
+                  "Keluar / Ganti Akun",
+                  style: TextStyle(color: Colors.blueGrey),
+                ),
               ),
             ],
           ),

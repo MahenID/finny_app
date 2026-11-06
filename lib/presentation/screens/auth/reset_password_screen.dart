@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../../../core/theme/app_colors.dart';
-import 'otp_screen.dart';
 
 class ResetPasswordScreen extends StatefulWidget {
   const ResetPasswordScreen({super.key});
@@ -12,6 +12,7 @@ class ResetPasswordScreen extends StatefulWidget {
 class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   final TextEditingController _emailController = TextEditingController();
   String? _emailError;
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -19,35 +20,52 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     super.dispose();
   }
 
-  // DIEDIT: Menambahkan async
   void _sendResetLink() async {
     setState(() {
       _emailError = null;
     });
 
     final email = _emailController.text.trim();
+    final emailRegex = RegExp(r'^[\w\.\-]+@([\w\-]+\.)+[\w\-]{2,6}$');
 
     if (email.isEmpty) {
       setState(() => _emailError = "Email tidak boleh kosong");
-    } else if (!email.contains("@gmail.com")) {
-      setState(() => _emailError = "Email harus menggunakan @gmail.com");
-    } else {
-      // DIEDIT: Kirim pengguna ke halaman OTP dengan penanda isFromForgotPassword = true
-      final result = await Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) =>
-              OtpScreen(email: email, isFromForgotPassword: true),
+      return;
+    } else if (!emailRegex.hasMatch(email)) {
+      setState(() => _emailError = "Format email tidak valid");
+      return;
+    }
+
+    setState(() => _isLoading = true);
+    try {
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            "Tautan reset kata sandi telah dikirim ke email kamu! Silakan periksa inbox/spam.",
+          ),
+          backgroundColor: AppColors.accentGreen,
+          duration: Duration(seconds: 4),
         ),
       );
-
-      // POP CHAIN: Jika berhasil semua dari depan, kembali ke LoginScreen membawa nilai true
-      if (result == true && mounted) {
-        Navigator.pop(context, true);
+      Navigator.pop(context, true);
+    } on FirebaseAuthException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _emailError = e.message ?? "Gagal mengirim tautan reset";
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _emailError = "Terjadi kesalahan saat menghubungi server";
+      });
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
       }
     }
   }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -168,7 +186,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: _sendResetLink,
+                  onPressed: _isLoading ? null : _sendResetLink,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.accentGreen,
                     padding: const EdgeInsets.symmetric(vertical: 16),
@@ -177,14 +195,23 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                     ),
                     elevation: 0,
                   ),
-                  child: const Text(
-                    "Kirim Tautan",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                  ),
+                  child: _isLoading
+                      ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text(
+                          "Kirim Tautan",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
                 ),
               ),
             ],

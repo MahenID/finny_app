@@ -148,7 +148,16 @@ class PremiumPaywallWidget extends StatelessWidget {
                   width: double.infinity,
                   height: 56,
                   child: ElevatedButton(
-                    onPressed: () {},
+                    onPressed: () {
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text("Masa percobaan Finny Pro 7 hari aktif!"),
+                          backgroundColor: AppColors.accentGreen,
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.accentGreen,
                       shape: RoundedRectangleBorder(
